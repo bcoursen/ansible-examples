@@ -1,0 +1,39 @@
+---
+- name: Provision instances
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  # load AWS variables from this group vars file
+  vars_files:
+  - group_vars/all
+
+  tasks:
+  - name: Launch instances
+    ec2:
+      keypair: "bcoursen"
+      group: "jboss"
+      type: "t2.micro"
+      image: "ami-ac5f2fcc"
+      region: "us-west-1"
+      instance_tags:
+          Name: "brian"
+          server: "jboss"
+      count: "1"
+      wait: true
+    register: ec2
+
+  - name: Add new instance to host group
+    add_host: hostname={{ item.public_ip }} groupname=launched
+    with_items: ec2.instances
+  - name: Wait for SSH to come up
+    wait_for: host={{ item.public_dns_name }} port=22 delay=90 timeout=320 state=started
+    with_items: ec2.instances
+
+- name: Configure instance(s)
+  hosts: launched
+  become: True
+  gather_facts: True
+  roles:
+    - jboss-standalone
+    - java-app
