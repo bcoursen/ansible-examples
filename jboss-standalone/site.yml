@@ -5,3 +5,4 @@
 
   roles:
     - jboss-standalone
+    - java-app
